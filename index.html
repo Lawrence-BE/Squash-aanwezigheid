@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Squash tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f4f0;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+      color: #1a1a18;
+    }
+
+    .wrap { max-width: 480px; margin: 0 auto; }
+
+    h1 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+    .sub { font-size: 14px; color: #5f5e5a; margin-bottom: 1.5rem; }
+
+    .card {
+      background: #fff;
+      border: 0.5px solid rgba(0,0,0,0.12);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .card-date { font-size: 15px; font-weight: 500; }
+    .card-resp { font-size: 13px; color: #5f5e5a; }
+
+    .player-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+    }
+
+    .player-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .toggle { display: flex; gap: 6px; }
+
+    .btn {
+      border: 0.5px solid rgba(0,0,0,0.2);
+      border-radius: 8px;
+      padding: 4px 13px;
+      font-size: 12px;
+      cursor: pointer;
+      background: transparent;
+      color: #5f5e5a;
+      font-family: inherit;
+      transition: background 0.1s;
+    }
+    .btn:hover { background: #f5f4f0; }
+    .btn.in-active  { background: #EAF3DE; color: #3B6D11; border-color: #C0DD97; font-weight: 500; }
+    .btn.out-active { background: #FCEBEB; color: #A32D2D; border-color: #F7C1C1; font-weight: 500; }
+
+    hr { border: none; border-top: 0.5px solid rgba(0,0,0,0.1); margin: 10px 0; }
+
+    .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .pill {
+      font-size: 12px;
+      border-radius: 99px;
+      padding: 3px 11px;
+      border: 0.5px solid rgba(0,0,0,0.1);
+      background: #f5f4f0;
+      color: #5f5e5a;
+    }
+    .pill.green { background: #EAF3DE; color: #3B6D11; border-color: #C0DD97; }
+    .pill.red   { background: #FCEBEB; color: #A32D2D; border-color: #F7C1C1; }
+    .pill.amber { background: #FAEEDA; color: #633806; border-color: #FAC775; }
+
+    .status-bar {
+      font-size: 12px;
+      color: #888780;
+      text-align: center;
+      margin-top: 1.25rem;
+    }
+
+    .reset-btn {
+      display: block;
+      margin: 0.5rem auto 0;
+      font-size: 12px;
+      color: #888780;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .reset-btn:hover { color: #5f5e5a; }
+
+    /* Setup screen */
+    .setup {
+      background: #fff;
+      border: 0.5px solid rgba(0,0,0,0.12);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .setup h2 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+    .setup p { font-size: 13px; color: #5f5e5a; margin-bottom: 1rem; line-height: 1.6; }
+    .setup input {
+      width: 100%;
+      border: 0.5px solid rgba(0,0,0,0.2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      margin-bottom: 8px;
+      outline: none;
+    }
+    .setup input:focus { border-color: #378ADD; box-shadow: 0 0 0 2px rgba(55,138,221,0.15); }
+    .setup-btn {
+      width: 100%;
+      background: #1a1a18;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px;
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .setup-btn:hover { background: #333; }
+    .setup-error { font-size: 12px; color: #A32D2D; margin-top: 6px; }
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Squash sessions</h1>
+  <p class="sub">Mark yourself in or out for each Wednesday</p>
+  <div id="app"><p style="color:#888;font-size:14px;">Connecting...</p></div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ─── PASTE YOUR FIREBASE CONFIG HERE ───────────────────────────────────────
+const firebaseConfig = {
+  // apiKey: "...",
+  // authDomain: "...",
+  // databaseURL: "...",
+  // projectId: "...",
+  // storageBucket: "...",
+  // messagingSenderId: "...",
+  // appId: "..."
+};
+// ───────────────────────────────────────────────────────────────────────────
+
+const PLAYERS = [
+  { name: "Brecht",   initials: "BR", bg: "#E6F1FB", color: "#0C447C" },
+  { name: "Dries",    initials: "DR", bg: "#E1F5EE", color: "#085041" },
+  { name: "Filip",    initials: "FI", bg: "#EEEDFE", color: "#3C3489" },
+  { name: "Lawrence", initials: "LA", bg: "#FAEEDA", color: "#633806" },
+  { name: "Niels",    initials: "NI", bg: "#FAECE7", color: "#712B13" },
+  { name: "Quinten",  initials: "QU", bg: "#FBEAF0", color: "#72243E" },
+  { name: "Viktor",   initials: "VI", bg: "#EAF3DE", color: "#27500A" },
+  { name: "Wout",     initials: "WO", bg: "#FCEBEB", color: "#791F1F" },
+  { name: "Wouter",   initials: "WR", bg: "#F1EFE8", color: "#444441" },
+];
+
+function getNextWednesdays(count) {
+  const dates = [];
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const daysUntil = (3 - day + 7) % 7 || 7;
+  d.setDate(d.getDate() + daysUntil);
+  for (let i = 0; i < count; i++) {
+    dates.push(new Date(d));
+    d.setDate(d.getDate() + 7);
+  }
+  return dates;
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function dateKey(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+const hasConfig = firebaseConfig.apiKey;
+
+if (!hasConfig) {
+  showSetupScreen();
+} else {
+  initApp();
+}
+
+function showSetupScreen() {
+  document.getElementById('app').innerHTML = `
+    <div class="setup">
+      <h2>One-time setup needed</h2>
+      <p>This app needs a free Firebase project to save responses. Paste your Firebase config JSON below — you only need to do this once, then share the file with your group.</p>
+      <textarea id="cfg-input" style="width:100%;height:110px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;padding:8px 12px;font-size:12px;font-family:monospace;resize:vertical;outline:none;" placeholder='{ "apiKey": "...", "authDomain": "...", "databaseURL": "...", ... }'></textarea>
+      <button class="setup-btn" onclick="applyConfig()">Save and load</button>
+      <p class="setup-error" id="cfg-error"></p>
+      <p style="margin-top:12px;font-size:12px;color:#888;">Not sure how to get this? Ask Claude: <em>"Walk me through creating a free Firebase Realtime Database"</em></p>
+    </div>`;
+}
+
+window.applyConfig = function() {
+  const raw = document.getElementById('cfg-input').value.trim();
+  try {
+    const cfg = JSON.parse(raw);
+    if (!cfg.apiKey || !cfg.databaseURL) throw new Error("Missing apiKey or databaseURL");
+    localStorage.setItem('squash_fb_config', raw);
+    location.reload();
+  } catch(e) {
+    document.getElementById('cfg-error').textContent = 'Invalid config: ' + e.message;
+  }
+};
+
+function initApp() {
+  let config = firebaseConfig;
+  if (!config.apiKey) {
+    try { config = JSON.parse(localStorage.getItem('squash_fb_config') || '{}'); } catch(e) {}
+  }
+  if (!config.apiKey) { showSetupScreen(); return; }
+
+  const app = initializeApp(config);
+  const db = getDatabase(app);
+  const sessions = getNextWednesdays(2);
+  let state = {};
+
+  sessions.forEach(s => {
+    const dk = dateKey(s);
+    const r = ref(db, 'sessions/' + dk);
+    onValue(r, snap => {
+      state[dk] = snap.val() || {};
+      render(sessions, state, db);
+    });
+  });
+
+  window._setStatus = function(dk, idx, status) {
+    const cur = (state[dk] || {})[idx];
+    const newVal = cur === status ? null : status;
+    const r = ref(db, 'sessions/' + dk + '/' + idx);
+    set(r, newVal);
+  };
+
+  window._resetAll = async function() {
+    for (const s of sessions) {
+      const dk = dateKey(s);
+      await set(ref(db, 'sessions/' + dk), null);
+    }
+  };
+}
+
+function render(sessions, state, db) {
+  const app = document.getElementById('app');
+  let html = '';
+
+  sessions.forEach((s, si) => {
+    const dk = dateKey(s);
+    const ss = state[dk] || {};
+    const label = si === 0 ? 'This week' : 'Next week';
+    let inCount = 0, outCount = 0;
+    PLAYERS.forEach((_, i) => {
+      if (ss[i] === 'in') inCount++;
+      if (ss[i] === 'out') outCount++;
+    });
+    const pending = PLAYERS.length - inCount - outCount;
+
+    html += `<div class="card">
+      <div class="card-head">
+        <span class="card-date">${label} · ${formatDate(s)}</span>
+        <span class="card-resp">${inCount + outCount} / ${PLAYERS.length} responded</span>
+      </div>`;
+
+    PLAYERS.forEach((p, i) => {
+      const status = ss[i];
+      html += `<div class="player-row">
+        <span class="player-info">
+          <span class="avatar" style="background:${p.bg};color:${p.color}">${p.initials}</span>
+          ${p.name}
+        </span>
+        <span class="toggle">
+          <button class="btn ${status === 'in' ? 'in-active' : ''}" onclick="_setStatus('${dk}',${i},'in')">In</button>
+          <button class="btn ${status === 'out' ? 'out-active' : ''}" onclick="_setStatus('${dk}',${i},'out')">Out</button>
+        </span>
+      </div>`;
+    });
+
+    html += `<hr>
+      <div class="pills">
+        <span class="pill green">${inCount} in</span>
+        <span class="pill red">${outCount} out</span>
+        <span class="pill amber">${pending} pending</span>
+      </div>
+    </div>`;
+  });
+
+  html += `<p class="status-bar">Updates sync in real time for everyone</p>`;
+  html += `<button class="reset-btn" onclick="_resetAll()">Reset all responses</button>`;
+  app.innerHTML = html;
+}
+</script>
+</body>
+</html>
